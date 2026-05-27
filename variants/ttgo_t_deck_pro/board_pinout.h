@@ -58,11 +58,17 @@
     //#define BATTERY_PIN         4
 
     #define BOARD_POWERON       10
-    #define BOARD_SDCARD_CS     39
-    #define BOARD_BL_PIN        42
 
-    #define BOARD_I2C_SDA       18
-    #define BOARD_I2C_SCL       8
+    #define BOARD_I2C_SDA       13
+    #define BOARD_I2C_SCL       14
+
+    #define KEYBOARD_LED        42
+    #define KEYPAD_ROWS         4
+    #define KEYPAD_COLS         10
+    #define KEYPAD_IRQ          15
+
+    // Motor pin
+    #define BOARD_MOTOR_PIN 2
 
     //  JOYSTICK
     /*#define HAS_JOYSTICK

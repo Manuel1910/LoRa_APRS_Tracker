@@ -16,6 +16,9 @@
  * along with LoRa APRS Tracker. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifdef TTGO_T_DECK_PRO
+    #include <Adafruit_TCA8418.h>
+#endif
 #include <APRSPacketLib.h>
 #include <TinyGPS++.h>
 #include <logger.h>
@@ -82,6 +85,9 @@ int         messagesIterator        = 0;
 
 bool        showHumanHeading        = false;
 
+#ifdef TTGO_T_DECK_PRO
+    Adafruit_TCA8418 keypad;
+#endif
 
 namespace KEYBOARD_Utils {
 
@@ -780,23 +786,51 @@ namespace KEYBOARD_Utils {
 
     void read() {
         if (keyboardConnected) {
-            uint32_t lastKey = millis() - keyboardTime;
-            if (lastKey > 30 * 1000) keyDetected = false;
-            Wire.requestFrom(keyboardAddress, static_cast<uint8_t>(1));
-            while (Wire.available()) {
-                char c = Wire.read();
-                if (c != 0) {
-                    //Serial.print(c, DEC); Serial.print(" "); Serial.print(c, HEX); Serial.print(" "); Serial.println(char(c));    // just for debugging
-                    keyboardTime = millis();
-                    processPressedKey(c);
+            #ifdef TTGO_T_DECK_PRO
+                if (keypad.available() > 0) {
+                    //  datasheet page 15 - Table 1
+                    int k = keypad.getEvent();
+                    if (k & 0x80) Serial.print("PRESS\tR: ");
+                    else Serial.print("RELEASE\tR: ");
+                    k &= 0x7F;
+                    k--;
+                    Serial.print(k / 10);
+                    Serial.print("\tC: ");
+                    Serial.print(k % 10);
+                    Serial.println();
                 }
-            }
+            #else
+                uint32_t lastKey = millis() - keyboardTime;
+                if (lastKey > 30 * 1000) keyDetected = false;
+                Wire.requestFrom(keyboardAddress, static_cast<uint8_t>(1));
+                while (Wire.available()) {
+                    char c = Wire.read();
+                    if (c != 0) {
+                        //Serial.print(c, DEC); Serial.print(" "); Serial.print(c, HEX); Serial.print(" "); Serial.println(char(c));    // just for debugging
+                        keyboardTime = millis();
+                        processPressedKey(c);
+                    }
+                }
+            #endif
         }
     }
 
     void setup() {
         if (!Config.simplifiedTrackerMode) {
-            if (keyboardAddress != 0x00) keyboardConnected = true;
+            #ifdef TTGO_T_DECK_PRO
+                Serial.println("test keyboard");
+                pinMode(KEYPAD_IRQ, INPUT_PULLUP);
+                if (!keypad.begin(0x34, &Wire)) {
+                    Serial.println("keypad not found, check wiring & pullups!");
+                    //while (1);
+                } else {
+                    keypad.matrix(KEYPAD_ROWS, KEYPAD_COLS);    // configure the size of the keypad matrix(all other pins will be inputs)
+                    keypad.flush();                             // flush the internal buffer
+                    keyboardConnected = true;
+                }
+            #else
+                if (keyboardAddress != 0x00) keyboardConnected = true;
+            #endif
         }
     }
 
