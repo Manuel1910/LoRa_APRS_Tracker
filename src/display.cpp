@@ -420,8 +420,6 @@ void displayShow(const String& header, const String& line1, const String& line2,
         const String* const lines[] = {&line1, &line2};
 
         #ifdef HAS_EPAPER
-            display.setRotation(2);
-            display.mirror(true);
             display.setFont(&FreeMonoBold18pt7b);
             display.firstPage();
             do {
@@ -569,8 +567,6 @@ void displayShow(const String& header, const String& line1, const String& line2,
         const String* const lines[] = {&line1, &line2, &line3, &line4, &line5};
 
         #ifdef HAS_EPAPER
-            display.setRotation(2);
-            display.mirror(true);
             display.setFont(&FreeMonoBold18pt7b);
             display.firstPage();
             do {
