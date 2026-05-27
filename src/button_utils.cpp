@@ -22,6 +22,7 @@
 #include "board_pinout.h"
 #include "button_utils.h"
 #include "power_utils.h"
+#include "menu_utils.h"
 #include "display.h"
 
 #ifdef BUTTON_PIN
@@ -44,6 +45,9 @@
         void singlePress1() {
             menuTime = millis();
             KEYBOARD_Utils::downArrow();
+            #ifdef HAS_EPAPER
+                if (menuDisplay != 0) MENU_Utils::showOnScreen();
+            #endif
         }
         #ifdef RPC_Electronics_1W_LoRa_GPS
             void singlePress2() {
@@ -63,6 +67,9 @@
         void longPress1() {
             menuTime = millis();
             KEYBOARD_Utils::rightArrow();
+            #ifdef HAS_EPAPER
+                MENU_Utils::showOnScreen();
+            #endif
         }
 
         void doublePress1() {
@@ -74,12 +81,18 @@
                 menuDisplay = 0;
                 displayTime = millis();
             }
+            #ifdef HAS_EPAPER
+                MENU_Utils::showOnScreen();
+            #endif
         }
 
         void multiPress1() {
             displayToggle(true);
             menuTime = millis();
             menuDisplay = 9000;
+            #ifdef HAS_EPAPER
+                MENU_Utils::showOnScreen();
+            #endif
         }
 
         void loop() {
