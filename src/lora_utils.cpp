@@ -103,7 +103,7 @@ namespace LoRa_Utils {
     }
 
     void setup() {
-        #if defined(LIGHTTRACKER_PLUS_1_0) || defined(TTGO_T_BEAM_1W)
+        #ifdef RADIO_VCC_PIN
             pinMode(RADIO_VCC_PIN,OUTPUT);
             digitalWrite(RADIO_VCC_PIN,HIGH);
         #endif

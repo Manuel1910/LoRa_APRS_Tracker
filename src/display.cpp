@@ -57,23 +57,42 @@
         extern String topHeader2;
     #endif
 #else
-    #include <Adafruit_GFX.h>
+    #ifdef HAS_EPAPER
+        #define GxEPD2_DISPLAY_CLASS GxEPD2_BW
+        #define GxEPD2_DRIVER_CLASS GxEPD2_310_GDEQ031T10
+        #include <GxEPD2_BW.h>
+        //
+        #define bm_normal 0
+        #define bm_invert 1
+        #define bm_partial_update 2
+        //
+        #include <Fonts/FreeMono9pt7b.h>
+        #include <Fonts/FreeMonoBold9pt7b.h>
+        #include <Fonts/FreeMonoBold12pt7b.h>
+        #include <Fonts/FreeMonoBold18pt7b.h>
+        #include <Fonts/FreeMonoBold24pt7b.h>
 
-    #define ssd1306 //comment this line with "//" when using SH1106 screen instead of SSD1306
-
-    #if defined(TTGO_T_Beam_S3_SUPREME_V3) || defined(TTGO_T_BEAM_1W)
-        #undef ssd1306
-    #endif
-    #if defined(HELTEC_V3_GPS) || defined(HELTEC_V3_TNC) || defined(HELTEC_V3_2_GPS) || defined(HELTEC_V3_2_TNC)
-        #define OLED_DISPLAY_HAS_RST_PIN
-    #endif
-
-    #ifdef ssd1306
-        #include <Adafruit_SSD1306.h>
-        Adafruit_SSD1306 display(128, 64, &Wire, OLED_RST);
+        SPIClass dispPort(FSPI);
+        GxEPD2_BW<GxEPD2_310_GDEQ031T10, GxEPD2_310_GDEQ031T10::HEIGHT> display(GxEPD2_310_GDEQ031T10(EPAPER_CS, EPAPER_DC, EPAPER_RST, EPAPER_BUSY));  // GDEQ031T10 240x320, UC8253, (no inking, backside mark KEGMO 3100)
     #else
-        #include <Adafruit_SH110X.h>
-        Adafruit_SH1106G display(128, 64, &Wire, OLED_RST);
+        #include <Adafruit_GFX.h>
+
+        #define ssd1306 //comment this line with "//" when using SH1106 screen instead of SSD1306
+
+        #if defined(TTGO_T_Beam_S3_SUPREME_V3) || defined(TTGO_T_BEAM_1W)
+            #undef ssd1306
+        #endif
+        #if defined(HELTEC_V3_GPS) || defined(HELTEC_V3_TNC) || defined(HELTEC_V3_2_GPS) || defined(HELTEC_V3_2_TNC)
+            #define OLED_DISPLAY_HAS_RST_PIN
+        #endif
+
+        #ifdef ssd1306
+            #include <Adafruit_SSD1306.h>
+            Adafruit_SSD1306 display(128, 64, &Wire, OLED_RST);
+        #else
+            #include <Adafruit_SH110X.h>
+            Adafruit_SH1106G display(128, 64, &Wire, OLED_RST);
+        #endif
     #endif
 #endif
 
@@ -251,41 +270,59 @@ void displaySetup() {
             sprite.createSprite(160,80);
         #endif
     #else
-        #ifdef OLED_DISPLAY_HAS_RST_PIN
-            pinMode(OLED_RST, OUTPUT);
-            digitalWrite(OLED_RST, LOW);
-            delay(20);
-            digitalWrite(OLED_RST, HIGH);
-        #endif
+        #ifdef HAS_EPAPER
+            dispPort.begin(EPAPER_SCLK, EPAPER_MISO, EPAPER_MOSI);//, EPAPER_CS);
+            display.init(115200, true, 2, false, dispPort, SPISettings(4000000, MSBFIRST, SPI_MODE0));
+            //display.setRotation(1);
+            display.setFont(&FreeMono9pt7b);
+            display.setTextColor(GxEPD_BLACK);
 
-        Wire.begin(OLED_SDA, OLED_SCL);
-        #ifdef ssd1306
-            if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c, false, false)) {
-                logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "SSD1306", "allocation failed!");
-                while (true) {}
+            display.setFullWindow();
+            display.firstPage();
+            do {
+                display.fillScreen(GxEPD_WHITE);
+                display.setCursor(10, 20);
+                display.print("Hola ESP32-S3!");
             }
+            while (display.nextPage());
+
         #else
-            if (!display.begin(0x3c, false)) {
-                logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "SH1106", "allocation failed!");
-                while (true) {}
-            }
+            #ifdef OLED_DISPLAY_HAS_RST_PIN
+                pinMode(OLED_RST, OUTPUT);
+                digitalWrite(OLED_RST, LOW);
+                delay(20);
+                digitalWrite(OLED_RST, HIGH);
+            #endif
+
+            Wire.begin(OLED_SDA, OLED_SCL);
+            #ifdef ssd1306
+                if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c, false, false)) {
+                    logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "SSD1306", "allocation failed!");
+                    while (true) {}
+                }
+            #else
+                if (!display.begin(0x3c, false)) {
+                    logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "SH1106", "allocation failed!");
+                    while (true) {}
+                }
+            #endif
+            if (Config.display.turn180) display.setRotation(2);
+            display.clearDisplay();
+            #ifdef ssd1306
+                display.setTextColor(WHITE);
+            #else
+                display.setTextColor(SH110X_WHITE);
+            #endif
+            display.setTextSize(1);
+            display.setCursor(0, 0);
+            #ifdef ssd1306
+                display.ssd1306_command(SSD1306_SETCONTRAST);
+                display.ssd1306_command(screenBrightness);
+            #else
+                display.setContrast(screenBrightness);
+            #endif
+            display.display();
         #endif
-        if (Config.display.turn180) display.setRotation(2);
-        display.clearDisplay();
-        #ifdef ssd1306
-            display.setTextColor(WHITE);
-        #else
-            display.setTextColor(SH110X_WHITE);
-        #endif
-        display.setTextSize(1);
-        display.setCursor(0, 0);
-        #ifdef ssd1306
-            display.ssd1306_command(SSD1306_SETCONTRAST);
-            display.ssd1306_command(screenBrightness);
-        #else
-            display.setContrast(screenBrightness);
-        #endif
-        display.display();
     #endif
 }
 
@@ -294,20 +331,28 @@ void displayToggle(bool toggle) {
         #ifdef HAS_TFT
             analogWrite(TFT_BL, screenBrightness);
         #else
-            #ifdef ssd1306
-                display.ssd1306_command(SSD1306_DISPLAYON);
+            #ifdef HAS_EPAPER
+                //
             #else
-                display.oled_command(SH110X_DISPLAYON);
+                #ifdef ssd1306
+                    display.ssd1306_command(SSD1306_DISPLAYON);
+                #else
+                    display.oled_command(SH110X_DISPLAYON);
+                #endif
             #endif
         #endif
     } else {
         #ifdef HAS_TFT
             analogWrite(TFT_BL, 0);
         #else
-            #ifdef ssd1306
-                display.ssd1306_command(SSD1306_DISPLAYOFF);
+            #ifdef HAS_EPAPER
+                //
             #else
-                display.oled_command(SH110X_DISPLAYOFF);
+                #ifdef ssd1306
+                    display.ssd1306_command(SSD1306_DISPLAYOFF);
+                #else
+                    display.oled_command(SH110X_DISPLAYOFF);
+                #endif
             #endif
         #endif
     }
@@ -373,27 +418,45 @@ void displayShow(const String& header, const String& line1, const String& line2,
     #else
         const String* const lines[] = {&line1, &line2};
 
-        display.clearDisplay();
-        #ifdef ssd1306
-            display.setTextColor(WHITE);
+        #ifdef HAS_EPAPER
+            display.setFont(&FreeMonoBold18pt7b);
+            display.firstPage();
+            do {
+                display.fillScreen(GxEPD_WHITE);
+                display.setCursor(5, 30);
+                display.print(header);
+                display.setFont(&FreeMonoBold9pt7b);
+                for (int i = 0; i < 2; i++) {
+                    display.setCursor(5, 50 + (20 * i));
+                    display.print(*lines[i]);
+                }
+            }
+            while (display.nextPage());
         #else
-            display.setTextColor(SH110X_WHITE);
+            const String* const lines[] = {&line1, &line2};
+
+            display.clearDisplay();
+            #ifdef ssd1306
+                display.setTextColor(WHITE);
+            #else
+                display.setTextColor(SH110X_WHITE);
+            #endif
+            display.setTextSize(2);
+            display.setCursor(0, 0);
+            display.println(header);
+            display.setTextSize(1);
+            for (int i = 0; i < 2; i++) {
+                display.setCursor(0, 16 + (10 * i));
+                display.println(*lines[i]);
+            }
+            #ifdef ssd1306
+                display.ssd1306_command(SSD1306_SETCONTRAST);
+                display.ssd1306_command(screenBrightness);
+            #else
+                display.setContrast(screenBrightness);
+            #endif
+            display.display();
         #endif
-        display.setTextSize(2);
-        display.setCursor(0, 0);
-        display.println(header);
-        display.setTextSize(1);
-        for (int i = 0; i < 2; i++) {
-            display.setCursor(0, 16 + (10 * i));
-            display.println(*lines[i]);
-        }
-        #ifdef ssd1306
-            display.ssd1306_command(SSD1306_SETCONTRAST);
-            display.ssd1306_command(screenBrightness);
-        #else
-            display.setContrast(screenBrightness);
-        #endif
-        display.display();
     #endif
     delay(wait);
 }
@@ -409,7 +472,11 @@ void drawSymbol(int symbolIndex, bool bluetoothActive) {
             sprite.drawBitmap(280, 70, bitMap, SYMBOL_WIDTH, SYMBOL_HEIGHT, TFT_WHITE);
         #endif
     #else
-        display.drawBitmap((display.width() - SYMBOL_WIDTH), 0, bitMap, SYMBOL_WIDTH, SYMBOL_HEIGHT, 1);
+        #ifdef HAS_EPAPER
+            //
+        #else
+            display.drawBitmap((display.width() - SYMBOL_WIDTH), 0, bitMap, SYMBOL_WIDTH, SYMBOL_HEIGHT, 1);
+        #endif
     #endif
 }
 
@@ -498,55 +565,73 @@ void displayShow(const String& header, const String& line1, const String& line2,
     #else
         const String* const lines[] = {&line1, &line2, &line3, &line4, &line5};
 
-        display.clearDisplay();
-        #ifdef ssd1306
-            display.setTextColor(WHITE);
-            display.drawLine(0, 16, 128, 16, WHITE);
-            display.drawLine(0, 17, 128, 17, WHITE);
-        #else
-            display.setTextColor(SH110X_WHITE);
-            display.drawLine(0, 16, 128, 16, SH110X_WHITE);
-            display.drawLine(0, 17, 128, 17, SH110X_WHITE);
-        #endif
-        display.setTextSize(2);
-        display.setCursor(0, 0);
-        display.println(header);
-        display.setTextSize(1);
-        for (int i = 0; i < 5; i++) {
-            display.setCursor(0, 20 + (9 * i));
-            display.println(*lines[i]);
-        }
-        #ifdef ssd1306
-            display.ssd1306_command(SSD1306_SETCONTRAST);
-            display.ssd1306_command(screenBrightness);
-        #else
-            display.setContrast(screenBrightness);
-        #endif
-
-        if (menuDisplay == 0 && Config.display.showSymbol) {
-            int symbol = 100;
-            for (int i = 0; i < symbolArraySize; i++) {
-                if (currentBeacon->symbol == symbolArray[i]) {
-                    symbol = i;
-                    break;
+        #ifdef HAS_EPAPER
+            display.setFont(&FreeMonoBold18pt7b);
+            display.firstPage();
+            do {
+                display.fillScreen(GxEPD_WHITE);
+                display.setCursor(5, 30);
+                display.print(header);
+                display.setFont(&FreeMonoBold9pt7b);
+                for (int i = 0; i < 5; i++) {
+                    display.setCursor(5, 50 + (20 * i));
+                    display.print(*lines[i]);
                 }
             }
+            while (display.nextPage());
+        #else
+            const String* const lines[] = {&line1, &line2, &line3, &line4, &line5};
 
-            symbolAvailable = symbol != 100;
-
-            /*
-            * Symbol alternate every 5s
-            * If bluetooth is disconnected or if we are in the first part of the clock, then we show the APRS symbol
-            * Otherwise, we are in the second part of the clock, then we show BT connected
-            */
-            const auto time_now = now();
-            if (!bluetoothConnected || time_now % 10 < 5) {
-                if (symbolAvailable) drawSymbol(symbol, false);
-            } else if (bluetoothConnected) {    // TODO In this case, the text symbol stay displayed due to symbolAvailable false in menu_utils
-                drawSymbol(symbol, true);
+            display.clearDisplay();
+            #ifdef ssd1306
+                display.setTextColor(WHITE);
+                display.drawLine(0, 16, 128, 16, WHITE);
+                display.drawLine(0, 17, 128, 17, WHITE);
+            #else
+                display.setTextColor(SH110X_WHITE);
+                display.drawLine(0, 16, 128, 16, SH110X_WHITE);
+                display.drawLine(0, 17, 128, 17, SH110X_WHITE);
+            #endif
+            display.setTextSize(2);
+            display.setCursor(0, 0);
+            display.println(header);
+            display.setTextSize(1);
+            for (int i = 0; i < 5; i++) {
+                display.setCursor(0, 20 + (9 * i));
+                display.println(*lines[i]);
             }
-        }
-        display.display();
+            #ifdef ssd1306
+                display.ssd1306_command(SSD1306_SETCONTRAST);
+                display.ssd1306_command(screenBrightness);
+            #else
+                display.setContrast(screenBrightness);
+            #endif
+
+            if (menuDisplay == 0 && Config.display.showSymbol) {
+                int symbol = 100;
+                for (int i = 0; i < symbolArraySize; i++) {
+                    if (currentBeacon->symbol == symbolArray[i]) {
+                        symbol = i;
+                        break;
+                    }
+                }
+
+                symbolAvailable = symbol != 100;
+
+                /*
+                * Symbol alternate every 5s
+                * If bluetooth is disconnected or if we are in the first part of the clock, then we show the APRS symbol
+                * Otherwise, we are in the second part of the clock, then we show BT connected
+                */
+                const auto time_now = now();
+                if (!bluetoothConnected || time_now % 10 < 5) {
+                    if (symbolAvailable) drawSymbol(symbol, false);
+                } else if (bluetoothConnected) {    // TODO In this case, the text symbol stay displayed due to symbolAvailable false in menu_utils
+                    drawSymbol(symbol, true);
+                }
+            }
+            display.display();
+        #endif
     #endif
     delay(wait);
 }

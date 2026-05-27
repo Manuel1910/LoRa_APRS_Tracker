@@ -69,8 +69,8 @@ ____________________________________________________________________*/
 #endif
 
 
-String      versionDate             = "2026-04-22";
-String      versionNumber           = "2.4.3.2";
+String      versionDate             = "2026-05-27";
+String      versionNumber           = "2.4.3.3";
 Configuration                       Config;
 HardwareSerial                      gpsSerial(1);
 TinyGPSPlus                         gps;
@@ -252,11 +252,18 @@ void loop() {
         if (sendUpdate && gps_loc_update) STATION_Utils::sendBeacon();
         if (gps_time_update) SMARTBEACON_Utils::checkInterval(currentSpeed);
 
-        if (millis() - refreshDisplayTime >= 1000 || gps_time_update) {
-            GPS_Utils::checkStartUpFrames();
-            MENU_Utils::showOnScreen();
-            refreshDisplayTime = millis();
-        }
+        #if defined(HAS_EPAPER)
+            /*if (millis() - refreshDisplayTime >= 1000 || gps_time_update) {
+                Serial.print(gps.location.lat(),7); Serial.print(" "); Serial.println(gps.location.lng(),7);
+                refreshDisplayTime = millis();
+            }*/
+        #else
+            if (millis() - refreshDisplayTime >= 1000 || gps_time_update) {
+                GPS_Utils::checkStartUpFrames();
+                MENU_Utils::showOnScreen();
+                refreshDisplayTime = millis();
+            }
+        #endif
         SLEEP_Utils::checkIfGPSShouldSleep();
     } else {
         if (millis() - lastGPSTime > txInterval) {

@@ -26,6 +26,7 @@
 #include "board_pinout.h"
 #include "power_utils.h"
 #include "sleep_utils.h"
+#include "menu_utils.h"
 #include "lora_utils.h"
 #include "ble_utils.h"
 #include "wx_utils.h"
@@ -266,6 +267,10 @@ namespace STATION_Utils {
         lastTxTime  = millis();
         sendUpdate  = false;
         if (currentBeacon->gpsEcoMode) gpsShouldSleep = true;
+
+        #ifdef HAS_EPAPER
+            MENU_Utils::showOnScreen();
+        #endif
     }
 
     void saveIndex(uint8_t type, uint8_t index) {

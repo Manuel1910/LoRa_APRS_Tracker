@@ -396,17 +396,21 @@ namespace POWER_Utils {
             Wire1.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
         #endif
 
-        #if defined(TTGO_T_DECK_GPS) || defined(TTGO_T_DECK_PLUS)
+        #if defined(TTGO_T_DECK_GPS) || defined(TTGO_T_DECK_PLUS) || defined(TTGO_T_DECK_PRO)
             pinMode(BOARD_POWERON, OUTPUT);
             digitalWrite(BOARD_POWERON, HIGH);
 
-            pinMode(BOARD_SDCARD_CS, OUTPUT);
             pinMode(RADIO_CS_PIN, OUTPUT);
-            pinMode(TFT_CS, OUTPUT);
+            #ifndef TTGO_T_DECK_PRO
+                pinMode(BOARD_SDCARD_CS, OUTPUT);
+                pinMode(TFT_CS, OUTPUT);
+            #endif
 
-            digitalWrite(BOARD_SDCARD_CS, HIGH);
             digitalWrite(RADIO_CS_PIN, HIGH);
-            digitalWrite(TFT_CS, HIGH);
+            #ifndef TTGO_T_DECK_PRO
+                digitalWrite(BOARD_SDCARD_CS, HIGH);
+                digitalWrite(TFT_CS, HIGH);
+            #endif
 
             delay(500);
             Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
@@ -448,7 +452,7 @@ namespace POWER_Utils {
                 adc_ctrl_OFF();
             #endif
 
-            #if defined(TTGO_T_DECK_GPS) || defined(TTGO_T_DECK_PLUS)
+            #if defined(TTGO_T_DECK_GPS) || defined(TTGO_T_DECK_PLUS) || defined(TTGO_T_DECK_PRO)
                 digitalWrite(BOARD_POWERON, LOW);
             #endif
 

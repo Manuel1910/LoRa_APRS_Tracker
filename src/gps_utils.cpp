@@ -74,7 +74,7 @@ namespace GPS_Utils {
             digitalWrite(GPS_VCC, LOW);
             delay(200);
         #endif
-        #if defined(F4GOH_1W_LoRa_Tracker) || defined(F4GOH_1W_LoRa_Tracker_LLCC68)
+        #if defined(F4GOH_1W_LoRa_Tracker) || defined(F4GOH_1W_LoRa_Tracker_LLCC68) || defined(TTGO_T_DECK_PRO)
             pinMode(GPS_VCC, OUTPUT);
             digitalWrite(GPS_VCC, HIGH);
             delay(200);
@@ -92,7 +92,12 @@ namespace GPS_Utils {
 
     void getData() {
         if (disableGPS) return;
-        while (gpsSerial.available() > 0) gps.encode(gpsSerial.read());
+        while (gpsSerial.available() > 0) {
+            /*char c = gpsSerial.read();
+            Serial.write(c);            // Print Serial Monitor (raw NMEA)
+            gps.encode(c);*/
+            gps.encode(gpsSerial.read());
+        }
     }
 
     void setDateFromData() {
