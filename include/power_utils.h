@@ -23,6 +23,9 @@
 #include "board_pinout.h"
 #if defined(HAS_AXP2101) || defined(HAS_AXP192)
     #include "XPowersLib.h"
+#elif defined(TTGO_T_DECK_PRO)
+    #define XPOWERS_CHIP_BQ25896
+    #include "XPowersLib.h"
 #else
     #include <Wire.h>
 #endif

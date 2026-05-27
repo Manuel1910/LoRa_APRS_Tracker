@@ -273,7 +273,8 @@ void displaySetup() {
         #ifdef HAS_EPAPER
             dispPort.begin(EPAPER_SCLK, EPAPER_MISO, EPAPER_MOSI);//, EPAPER_CS);
             display.init(115200, true, 2, false, dispPort, SPISettings(4000000, MSBFIRST, SPI_MODE0));
-            //display.setRotation(1);
+            display.setRotation(2);
+            display.mirror(true);
             display.setFont(&FreeMono9pt7b);
             display.setTextColor(GxEPD_BLACK);
 

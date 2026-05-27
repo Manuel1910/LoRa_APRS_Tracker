@@ -49,6 +49,9 @@
 #ifdef HAS_AXP2101
     XPowersAXP2101 PMU;
 #endif
+#ifdef TTGO_T_DECK_PRO
+    XPowersPPM PPM;
+#endif
 
 extern  Configuration                   Config;
 extern  logging::Logger                 logger;
@@ -375,6 +378,53 @@ namespace POWER_Utils {
             PMU.setSysPowerDownVoltage(2600);
         #endif
 
+        #ifdef TTGO_T_DECK_PRO
+            pinMode(BOARD_POWERON, OUTPUT);
+            digitalWrite(BOARD_POWERON, HIGH);
+
+            delay(300);
+
+            //
+            delay(5000);
+            Serial.println("partiendo");
+            //
+
+            bool beginStatus = false;
+            Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
+            if (begin(Wire)) beginStatus = true;
+
+            /*if (beginStatus) {
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "AXP2101", "init done!");
+            } else {
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "AXP2101", "init failed!");
+            }*/
+
+            Wire.beginTransmission(0x6B);       // BQ25896 I2C Address = 0x6B
+            if (Wire.endTransmission() == 0) {
+                if (!PPM.init(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, 0x6B)) {
+                    Serial.println("BQ25896 could not start");
+                } else {
+                    PPM.resetDefault();
+                    PPM.disableWatchdog();
+                    PPM.exitHizMode();
+                    PPM.disableOTG();
+                    PPM.enableBatterPowerPath();
+                    PPM.setInputCurrentLimit(1000);     //  FACTORY_BQ25896_INPUT_LIMIT_MA
+                    PPM.setSysPowerDownVoltage(3300);   //  FACTORY_BQ25896_SYS_POWER_DOWN_MV
+                    PPM.setChargeTargetVoltage(4208);   //  FACTORY_BQ25896_CHARGE_TARGET_MV
+                    PPM.setChargerConstantCurr(512);    //  FACTORY_BQ25896_FAST_CHARGE_MA
+                    PPM.setPrechargeCurr(128);          //  FACTORY_BQ25896_PRECHARGE_MA
+                    PPM.setTerminationCurr(128);   //  FACTORY_BQ25896_TERMINATION_MA
+                    PPM.enableChargingTermination();
+                    PPM.enableCharge();
+                    PPM.enableMeasure();
+                }
+            } else {
+                Serial.println("PPM not initialized");
+            }
+
+        #endif
+
         #ifdef BATTERY_PIN
             pinMode(BATTERY_PIN, INPUT);
         #endif
@@ -396,21 +446,17 @@ namespace POWER_Utils {
             Wire1.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
         #endif
 
-        #if defined(TTGO_T_DECK_GPS) || defined(TTGO_T_DECK_PLUS) || defined(TTGO_T_DECK_PRO)
+        #if defined(TTGO_T_DECK_GPS) || defined(TTGO_T_DECK_PLUS)
             pinMode(BOARD_POWERON, OUTPUT);
             digitalWrite(BOARD_POWERON, HIGH);
 
             pinMode(RADIO_CS_PIN, OUTPUT);
-            #ifndef TTGO_T_DECK_PRO
-                pinMode(BOARD_SDCARD_CS, OUTPUT);
-                pinMode(TFT_CS, OUTPUT);
-            #endif
+            pinMode(BOARD_SDCARD_CS, OUTPUT);
+            pinMode(TFT_CS, OUTPUT);
 
             digitalWrite(RADIO_CS_PIN, HIGH);
-            #ifndef TTGO_T_DECK_PRO
-                digitalWrite(BOARD_SDCARD_CS, HIGH);
-                digitalWrite(TFT_CS, HIGH);
-            #endif
+            digitalWrite(BOARD_SDCARD_CS, HIGH);
+            digitalWrite(TFT_CS, HIGH);
 
             delay(500);
             Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);

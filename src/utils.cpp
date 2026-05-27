@@ -179,7 +179,8 @@ namespace Utils {
             }
         }
 
-        /*for (int addr = 0; addr < 0x7F; ++addr) {
+        Serial.println("escaneando");
+        for (int addr = 0; addr < 0x7F; ++addr) {
             Wire.beginTransmission(addr);
             int err = Wire.endTransmission();
             if (err == 0) {
@@ -198,8 +199,8 @@ namespace Utils {
                     break;
                 }
             }
-            delay(50);
-        }*/
+            //delay(50);
+        }
 
         #ifdef HAS_TOUCHSCREEN
             for (addr = 1; addr < 0x7F; addr++) {
